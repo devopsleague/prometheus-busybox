@@ -1,34 +1,31 @@
 ---
 version: 2.1
 
+executors:
+  vm:
+    machine:
+      image: ubuntu-2004:202010-01
+
 jobs:
   build:
-    docker:
-    - image: docker:18.09.3
+    executor: vm
 
     steps:
     - checkout
-    - setup_remote_docker:
-        version: 18.09.3
-    - run: apk add make bash git
     - run: docker info
     - run: uname -a
       # Register binfmt_misc targets for cross-building
-    - run: docker run --privileged linuxkit/binfmt:v0.7
+    - run: docker run --privileged linuxkit/binfmt:v0.8
     - run: make
     - run: docker images
 
   build_master:
-    docker:
-    - image: docker:18.09.3
+    executor: vm
 
     steps:
     - checkout
-    - setup_remote_docker:
-        version: 18.09.3
-    - run: apk add make bash git
     - run: docker info
-    - run: docker run --privileged linuxkit/binfmt:v0.7
+    - run: docker run --privileged linuxkit/binfmt:v0.8
     - run: make SUFFIX=
     - run: docker images
     - run: make tag SUFFIX=
@@ -49,3 +46,15 @@ workflows:
         filters:
           branches:
             only: master
+
+  monthly:
+    triggers:
+    - schedule:
+        cron: "54 10 15 * *"
+        filters:
+          branches:
+            only:
+            - master
+    jobs:
+    - build_master:
+        context: org-context
